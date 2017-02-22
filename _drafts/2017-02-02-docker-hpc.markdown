@@ -16,11 +16,10 @@ What we want to do is different - we want that a user could bring an image with 
 So, we what we do is:
 
 1. Make Docker communicate via an HTTP socket
-2. An [authorization plugin][auth_plugin] that controls user input
-3. Make sure user and his groups are propagated into Docker container
+2. An authorization plugin to control user input
+3. A helper to propagate user and his groups into Docker container
 
 ### Make Docker communicate via an HTTP socket
-
 
 
 This is relatively easy. One have to switch Docker from unix socket to a tcp socket and create TLS certificates for every user. This allows us to indentificate user how executes Docker commands (which is impossible when using a unix socket)
@@ -28,7 +27,25 @@ This is relatively easy. One have to switch Docker from unix socket to a tcp soc
 
 You can read how to do it in [Docker documentation] [ssl_certificate] or have a look at [my scripts][docker_scripts] that automate the work to create [CA][CA], [server certificate][server_cert] and [user certificate][user_cert]. After this you have to make sure Docker daemon is started with `-H=0.0.0.0:2376 --tlsverify --tlscacert=<PATH TO>/ca.pem --tlscert=<PATH TO>/server-cert.pem --tlskey=<PATH TO>/server-key.pem` [custom options][docker_custom_options] and set `DOCKER_TLS_VERIFY=1, DOCKER_HOST=localhost:2376, DOCKER_CERT_PATH=<PATH TO USER CERTIFICATES>` environment variables for every user that will run Docker commands. The last one can be omited if you place certificates in ~/.docker (we do it via a [script][profiled] in /etc/profile.d).
 
+### An authorization plugin to control user input
 
+An [authorization plugin][auth_plugin] allows to check any command to Docker daemon before its execution. One cannot change the command, just allow or deny it. When Docker uses HTTP socket for communications, authorization plugin knows also the name of the user who executes the command.
+
+Some Go programming is necessary for the plugin. The one we've developed does the following:
+
+* User root can execute any commands
+* If user namespace is not disabled, any command can be executed
+* If user namespace is disabled and user is not root:
+    * If it is not run/exec/create command allow it (pull,push, ...)
+    * For run command
+        * make sure user and group arguments are there and they correspond to our user
+        * make sure no new privileges flag is there (--security-opt=no-new-privileges)
+    * For exec command
+        * make sure user argument correspond to our user and contaner was started by this user
+
+You can have a look at the plugin [here][myauth_plugin]. Note that this was my first Docker program, so it make look a bit messy :).
+
+[myauth_plugin]:https://github.com/SergeyYakubov/docker/tree/master/plugins/docker-auth-plugin
 [docker_root]:https://reventlov.com/advisories/using-the-docker-command-to-root-the-host
 [profiled]:https://raw.githubusercontent.com/SergeyYakubov/docker/master/scripts/config/etc/profile.d/docker.sh
 [docker_scripts]:https://github.com/SergeyYakubov/docker/tree/master/scripts/certs
