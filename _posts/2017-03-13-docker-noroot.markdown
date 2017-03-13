@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "How to safely let \"normal user\" to run Docker containers"
-date:   2017-02-02 15:34:58 +0100
+title:  "How to allow non-privileged users run Docker containers"
+date:   2017-03-13 10:34:58 +0100
 categories: HPC Docker
 style: "text-align:center"
 ---
@@ -10,10 +10,10 @@ Docker containers are nowadays used for many different tasks like software devel
 
 There is one problem with this approach - how to allow users run their own container in some infrastructure where they have no root rights? As we [know][docker_root], as soon as you allow a user to run Docker commands he can do bad things to your system. Since Docker has been developed with microservices in mind, it is supposed that only a trusted user (read root) should execute Docker commands. For example, you  as admin start a service which is running inside a Docker container and user (or other microservices) access this container via e.g. REST API.
 
-What we want to do is different - we want that a user could bring an image with his scientific (or whatever else) application, mount data he needs from the host filesystem and run it. We also do not want to write any additional software around Docker but be able to use native Docker commands (well, we've still created a couple of helper scripts). The activation of user namespaces could partially solve the problem, but one can always disable it by *--userns=host* and using mounted host data with user namespaces may be problematic due to file permissions.
+What I want to do is different - I want that a user could bring an image with his scientific (or whatever else) application, mount data he needs from the host filesystem and run it. I also do not want to write any additional software around Docker but be able to use native Docker commands (well, I've still created a couple of helper scripts). The activation of user namespaces could partially solve the problem, but one can always disable it by *--userns=host* and using mounted host data with user namespaces may be problematic due to file permissions.
 
 
-So, we what we do is:
+So, what I do is:
 
 1. Make Docker communicate via an HTTP socket
 2. An authorization plugin to control user input
@@ -25,13 +25,13 @@ So, we what we do is:
 This is relatively easy. One have to switch Docker from unix socket to a tcp socket and create TLS certificates for every user. This allows us to indentificate user how executes Docker commands (which is impossible when using a unix socket)
 
 
-You can read how to do it in [Docker documentation] [ssl_certificate] or have a look at [my scripts][docker_scripts] that automate the work to create [CA][CA], [server certificate][server_cert] and [user certificate][user_cert]. After this you have to make sure Docker daemon is started with `-H=0.0.0.0:2376 --tlsverify --tlscacert=<PATH TO>/ca.pem --tlscert=<PATH TO>/server-cert.pem --tlskey=<PATH TO>/server-key.pem` [custom options][docker_custom_options] and set `DOCKER_TLS_VERIFY=1, DOCKER_HOST=localhost:2376, DOCKER_CERT_PATH=<PATH TO USER CERTIFICATES>` environment variables for every user that will run Docker commands. The last one can be omited if you place certificates in ~/.docker (we do it via a [script][profiled] in /etc/profile.d).
+You can read how to do it in [Docker documentation] [ssl_certificate] or have a look at [my scripts][docker_scripts] that automate the work to create [CA][CA], [server certificate][server_cert] and [user certificate][user_cert]. After this you have to make sure Docker daemon is started with `-H=0.0.0.0:2376 --tlsverify --tlscacert=<PATH TO>/ca.pem --tlscert=<PATH TO>/server-cert.pem --tlskey=<PATH TO>/server-key.pem` [custom options][docker_custom_options] and set `DOCKER_TLS_VERIFY=1, DOCKER_HOST=localhost:2376, DOCKER_CERT_PATH=<PATH TO USER CERTIFICATES>` environment variables for every user that will run Docker commands. The last one can be omited if you place certificates in ~/.docker (I do it via a [script][profiled] in /etc/profile.d).
 
 ### An authorization plugin to control user input
 
 An [authorization plugin][auth_plugin] allows to check any command to Docker daemon before its execution. One cannot change the command, just allow or deny it. When Docker uses HTTP socket for communications, authorization plugin knows also the name of the user who executes the command.
 
-Some Go programming is necessary for the plugin. The one we've developed does the following:
+Some Go programming is necessary for the plugin. The one I've developed does the following:
 
 * User root can execute any commands
 * If user namespace is not disabled, any command can be executed
@@ -45,9 +45,28 @@ Some Go programming is necessary for the plugin. The one we've developed does th
 
 You can have a look at the plugin [here][myauth_plugin]. Note that this was my first Docker program, so it make look a bit messy :).
 
+### Propagate user name and groups into a Docker container
+
+So what we have up to now is that any user is allowed to execute Docker commands. The authorization plugin checks each user command and makes sure that whether user namespaces are used for this command or no-new-privileges flag is there and user in Docker command corresponds to the user in the TLS certificate. Which means that we force user to use Docker run like
+
+{% highlight bash %}
+docker run -u `id -u` -g `id -g` --userns=host --security-opt no-new-privileges --group-add <extra groups> ...
+{% endhighlight %}
+
+With the above command all processes running inside a Docker container will have correct owner and no privilege escalation is allowed. Note that there is actually no new user created in a container. In some cases this is not enough and application wants to see the real user (eg. sshd will not run). In this case one can pass user information from host to the container. The simplest way is to mount /etc/passwd and /etc/group from host and then replace or merge with corresponding files inside a container. A home directory can then be created via entrypoint script.
+
+I've written a small [script][dockerrun] that hides all this stuff from user. So a user can just type
+{% highlight bash %}
+dockerrun centos:7 id
+{% endhighlight %}
+
+and feel himself as on being the host :). The script does a bit more to prepare for running job on HPC, which I'll describe soon in other post.
+
+
+[dockerrun]:https://github.com/SergeyYakubov/docker/tree/master/scripts
 [myauth_plugin]:https://github.com/SergeyYakubov/docker/tree/master/plugins/docker-auth-plugin
 [docker_root]:https://reventlov.com/advisories/using-the-docker-command-to-root-the-host
-[profiled]:https://raw.githubusercontent.com/SergeyYakubov/docker/master/scripts/config/etc/profile.d/docker.sh
+[profiled]:https://raw.githubusercontent.com/SergeyYakubov/docker/master/config/etc/profile.d/docker.sh
 [docker_scripts]:https://github.com/SergeyYakubov/docker/tree/master/scripts/certs
 [docker_custom_options]: https://docs.docker.com/engine/admin/systemd/#/custom-docker-daemon-options
 [CA]: https://raw.githubusercontent.com/SergeyYakubov/docker/master/scripts/certs/create_ca.sh
