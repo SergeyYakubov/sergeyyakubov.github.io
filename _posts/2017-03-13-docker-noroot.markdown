@@ -4,6 +4,7 @@ title:  "How to allow non-privileged users run Docker containers"
 date:   2017-03-13 10:34:58 +0100
 categories: HPC Docker
 style: "text-align:center"
+comments: true
 ---
 
 Docker containers are nowadays used for many different tasks like software development and testing, service orchestration, software deployment. The idea that one can prepare an image with everything he needs on his own laptop and then make it run everywhere else in a matter of seconds is very attractive.
