@@ -54,7 +54,7 @@ So what we have up to now is that any user is allowed to execute Docker commands
 docker run -u `id -u` -g `id -g` --userns=host --security-opt no-new-privileges --group-add <extra groups> ...
 {% endhighlight %}
 
-With the above command all processes running inside a Docker container will have correct owner and no privilege escalation is allowed. Note that there is actually no new user created in a container. In some cases this is not enough and application wants to see the real user (eg. sshd will not run). In this case one can pass user information from host to the container. The simplest way is to mount /etc/passwd and /etc/group from host and then replace or merge with corresponding files inside a container. A home directory can then be created via entrypoint script.
+With the above command all processes running inside a Docker container will have correct owner and no privilege escalation is allowed. Note that there is actually no new user created in a container. In some cases this is not enough and application wants to see the real user (eg. sshd will not run). In this case one can pass user information from host to the container. The simplest way is to mount /etc/passwd and /etc/group from host and then replace or merge with corresponding files inside a container. A home directory can then be created via entrypoint script or mounted during the Docker run command.
 
 I've written a small [script][dockerrun] that hides all this stuff from user. So a user can just type
 {% highlight bash %}
