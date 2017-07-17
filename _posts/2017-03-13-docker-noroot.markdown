@@ -64,7 +64,7 @@ dockerrun centos:7 id
 and feel himself as on being the host :). The script does a bit more to prepare for running job on HPC, which I'll describe soon in other post.
 
 
-[dockerrun]:https://github.com/SergeyYakubov/docker/tree/master/scripts
+[dockerrun]:https://github.com/SergeyYakubov/docker/tree/master/scripts/wrappers/dockerrun
 [myauth_plugin]:https://github.com/SergeyYakubov/docker/tree/master/plugins/docker-auth-plugin
 [docker_root]:https://reventlov.com/advisories/using-the-docker-command-to-root-the-host
 [profiled]:https://raw.githubusercontent.com/SergeyYakubov/docker/master/config/etc/profile.d/docker.sh
