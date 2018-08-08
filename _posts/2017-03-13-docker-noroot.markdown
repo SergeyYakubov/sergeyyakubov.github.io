@@ -44,7 +44,7 @@ Some Go programming is necessary for the plugin. The one I've developed does the
     * For exec command
         * make sure user argument correspond to our user and contaner was started by this user
 
-You can have a look at the plugin [here][myauth_plugin]. Note that this was my first Docker program, so it make look a bit messy :).
+You can have a look at the plugin [here][myauth_plugin]. Note that this was my first Go program, so it make look a bit messy :).
 
 ### Propagate user name and groups into a Docker container
 
