@@ -66,7 +66,7 @@ and feel himself as on being the host :). The script does a bit more to prepare 
 
 [dockerrun]:https://github.com/SergeyYakubov/docker/tree/master/scripts/wrappers/dockerrun
 [myauth_plugin]:https://github.com/SergeyYakubov/docker/tree/master/plugins/docker-auth-plugin
-[docker_root]:https://reventlov.com/advisories/using-the-docker-command-to-root-the-host
+[docker_root]:https://www.zopyx.com/andreas-jung/contents/on-docker-security-docker-group-considered-harmful
 [profiled]:https://raw.githubusercontent.com/SergeyYakubov/docker/master/config/etc/profile.d/docker.sh
 [docker_scripts]:https://github.com/SergeyYakubov/docker/tree/master/scripts/certs
 [docker_custom_options]: https://docs.docker.com/engine/admin/systemd/#/custom-docker-daemon-options
